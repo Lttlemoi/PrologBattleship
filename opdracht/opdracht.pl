@@ -23,7 +23,8 @@
                          countConstraints/3,
                          isShipPart/1,
                          countRows/2,
-                         testRow/3,testRow/5]).
+                         testRow/3,
+                         transpose_m/2]).
 
 p_getBoardSize([XS], Y) :- length(XS, Y).
 p_getBoardSize([X|XS], Y) :- p_getBoardSize(XS, YY),
@@ -70,16 +71,6 @@ isHShipPart(xh).
 isVShipPart(n).
 isVShipPart(s).
 isVShipPart(xv).
-
-% Swaps the direction of shipParts
-swapDir(n, w).
-swapDir(s, e).
-swapDir(e, s).
-swapDir(w, n).
-swapDir(x, x).
-swapDir(xh, xv).
-swapDir(xv, xh).
-swapDir(o, o).
 
 p_countRow([], 0).
 p_countRow([X|XS], K) :- isShipPart(X),
@@ -128,3 +119,16 @@ testRow([X|XS], _, false, [X| KS], LS) :- not(isShipPart(X)),
 
 % shorthand version to test a row
 testRow(In, Out, Count) :- testRow(In, k, false, Out, Count).
+
+
+p_reapFirst([], [], []).
+p_reapFirst([[X|XS]|XXS], [XS|YYS], [X|AS]) :- p_reapFirst(XXS, YYS, AS).
+
+% transposes the given matrix
+% transpose_m(In, Out)
+% succesful if In and Out are eachothers transposed forms.
+% will fail if the matrix is jagged.
+transpose_m([], []).
+transpose_m([[]|XS], []) :- transpose_m(XS, []).
+transpose_m(XS, [AS|AAS]) :- p_reapFirst(XS, YS, AS),
+                             transpose_m(YS, AAS).
