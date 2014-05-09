@@ -13,21 +13,14 @@
 %            * neighboring parts are a valid ship
 % Retry with a transposed map to get the columns right.
 % Make sure no two ships touch eachother
-% General constraints:
-%     - no two ships touch eachother
-%     - ship count is correct
 
 %TEMP: working_directory(_, "C:\\Users\\User\\campus\\Programming paradigms\\Prolog\\PrologBattleship\\opdracht").
 
 % Puts everything in a module and only exports the listed predicates
-:- module(opdrachtBase, [isShipPart/1,
-                         testRow/4,
+:- module(opdrachtBase, [testRow/4,
                          testRows/4,
                          testCol/3,
                          testCols/3,
-                         transpose_m/2,
-                         mergeLengths/3,
-                         mergeLengths/2,
                          testParts/5]).
 
 
@@ -41,8 +34,7 @@ isShipPart(xh).
 isShipPart(xv).
 isShipPart(o).
 % Needs to be explicitely specified what literals are not ship parts
-isWater(k).
-%not(isShipPart("-")).
+isWater('~').
 
 % Test if a row is valid and counts the length of the horizontal ships.
 % A row is valid if
@@ -54,42 +46,36 @@ isWater(k).
 
 % base cases: all valid row ends
 testRow([], o, false, [], [], 0).                                                       % base case: last element is a unicellular ship
-testRow([], x, false, [], [], 0).                                                       % base case: last element is a ship center not part of a horizontal ship
+testRow([], xv, false, [], [], 0).                                                      % base case: last element is a ship center not part of a horizontal ship
 testRow([], e, false, [], [], 0).                                                       % base case: last element is the east end of a horizontal ship
 testRow([], n, false, [], [], 0).                                                       % base case: last element is part of a vertical ship
 testRow([], s, false, [], [], 0).                                                       % base case: last element is part of a vertical ship
-testRow([], X, false, [], [], 0) :- isWater(X).                                         % base case: last element is not part of a ship
-testRow([o|XS], X, false, [o| KS], [1|LS], C) :- isWater(X),
-                                                 testRow(XS, o, false, KS, LS, CC),
+testRow([], '~', false, [], [], 0).                                                     % base case: last element is not part of a ship
+testRow([o|XS], '~', false, [o| KS], [1|LS], C) :- testRow(XS, o, false, KS, LS, CC),
                                                  C is CC+1.                             % unicellular ship can only be after a non-shippart
-testRow([w|XS], X, false, [w| KS], [L|LS], C) :- isWater(X),
-                                                 testRow(XS, w, true, KS, [LL|LS], CC),
+testRow([w|XS], '~', false, [w| KS], [L|LS], C) :- testRow(XS, w, true, KS, [LL|LS], CC),
                                                  C is CC+1,
                                                  L is LL+1.                             % beginning of multicellular ship
 testRow([e|XS], w, true, [e| KS], [1|LS], C) :- testRow(XS, e, false, KS, LS, CC),
                                                 C is CC+1.                              % ending of multicellular ship
-testRow([e|XS], x, true, [e| KS], [1|LS], C) :- testRow(XS, e, false, KS, LS, CC),
+testRow([e|XS], xh, true, [e| KS], [1|LS], C) :- testRow(XS, e, false, KS, LS, CC),
                                                 C is CC+1.                              % ending of multicellular ship
-testRow([x|XS], w, true, [xh| KS], [L|LS], C) :- testRow(XS, x, true, KS, [LL|LS], CC),
+testRow([x|XS], w, true, [xh| KS], [L|LS], C) :- testRow(XS, xh, true, KS, [LL|LS], CC),
                                                  C is CC+1,
                                                  L is LL+1.                             % middle of multicellular horizontal ship
-testRow([x|XS], x, true, [xh| KS], [L|LS], C) :- testRow(XS, x, true, KS, [LL|LS], CC),
+testRow([x|XS], xh, true, [xh| KS], [L|LS], C) :- testRow(XS, xh, true, KS, [LL|LS], CC),
                                                  C is CC+1,
                                                  L is LL+1.                             % middle of multicellular horizontal ship
-testRow([n|XS], X, false, [n| KS], LS, C) :- isWater(X),
-                                             testRow(XS, n, false, KS, LS, CC),
+testRow([n|XS], '~', false, [n| KS], LS, C) :- testRow(XS, n, false, KS, LS, CC),
                                              C is CC+1.                                 % top of vertical multicellular ship
-testRow([s|XS], X, false, [s| KS], LS, C) :- isWater(X),
-                                             testRow(XS, s, false, KS, LS, CC),
+testRow([s|XS], '~', false, [s| KS], LS, C) :- testRow(XS, s, false, KS, LS, CC),
                                              C is CC+1.                                 % top of vertical multicellular ship
-testRow([x|XS], X, false, [xv| KS], LS, C) :- isWater(X),
-                                              testRow(XS, x, false, KS, LS, CC),
+testRow([x|XS], '~', false, [xv| KS], LS, C) :- testRow(XS, xv, false, KS, LS, CC),
                                               C is CC+1.                                % middle of vertical multicellular ship
-testRow([X|XS], _, false, [X| KS], LS, C) :- isWater(X),
-                                             testRow(XS, X, false, KS, LS, C).          % water right after something that is not in the middle of a horizontal ship
+testRow(['~'|XS], _, false, ['~'| KS], LS, C) :- testRow(XS, '~', false, KS, LS, C).    % water right after something that is not in the middle of a horizontal ship
 
 % shorthand version to test a row
-testRow(In, Out, LCount, PCount) :- testRow(In, k, false, Out, LCount, PCount).
+testRow(In, Out, LCount, PCount) :- testRow(In, '~', false, Out, LCount, PCount).
 
 % test all rows & count the length of the ships and number of parts per row
 % testRows(In, Out, PartsPerRow, shipLengths)
@@ -112,12 +98,10 @@ testCol([], xh, false, [], 0).                                              % ba
 testCol([], s, false, [], 0).                                               % base case: last element is the east end of a vertical ship
 testCol([], e, false, [], 0).                                               % base case: last element is part of a horizontal ship
 testCol([], w, false, [], 0).                                               % base case: last element is part of a horizontal ship
-testCol([], X, false, [], 0) :- isWater(X).                                 % base case: last element is not part of a ship
-testCol([o|XS], X, false, [1|LS], C) :- isWater(X),
-                                        testCol(XS, o, false, LS, CC),
+testCol([], '~', false, [], 0).                                             % base case: last element is not part of a ship
+testCol([o|XS], '~', false, [1|LS], C) :- testCol(XS, o, false, LS, CC),
                                         C is CC+1.                          % unicellular ship can only be after a non-shippart
-testCol([n|XS], X, false, [L|LS], C) :- isWater(X),
-                                        testCol(XS, n, true, [LL|LS], CC),
+testCol([n|XS], '~', false, [L|LS], C) :- testCol(XS, n, true, [LL|LS], CC),
                                         C is CC+1,
                                         L is LL+1.                          % beginning of multicellular ship
 testCol([s|XS], n, true, [1|LS], C) :- testCol(XS, s, false, LS, CC),
@@ -130,20 +114,16 @@ testCol([xv|XS], n, true, [L|LS], C) :- testCol(XS, xv, true, [LL|LS], CC),
 testCol([xv|XS], xv, true, [L|LS], C) :- testCol(XS, xv, true, [LL|LS], CC),
                                          C is CC+1,
                                          L is LL+1.                         % middle of multicellular vertical ship
-testCol([w|XS], X, false, LS, C) :- isWater(X),
-                                    testCol(XS, w, false, LS, CC),
+testCol([w|XS], '~', false, LS, C) :- testCol(XS, w, false, LS, CC),
                                     C is CC+1.                              % top of horizontal multicellular ship
-testCol([e|XS], X, false, LS, C) :- isWater(X),
-                                    testCol(XS, e, false, LS, CC),
+testCol([e|XS], '~', false, LS, C) :- testCol(XS, e, false, LS, CC),
                                     C is CC+1.                              % top of horizontal multicellular ship
-testCol([xh|XS], X, false, LS, C) :- isWater(X),
-                                     testCol(XS, xh, false, LS, CC),
+testCol([xh|XS], '~', false, LS, C) :- testCol(XS, xh, false, LS, CC),
                                      C is CC+1.                             % middle of horizontal multicellular ship
-testCol([X|XS], _, false, LS, C) :- isWater(X),
-                                    testCol(XS, X, false, LS, C).           % water right after something that is not in the middle of a vertical ship
+testCol(['~'|XS], _, false, LS, C) :- testCol(XS, '~', false, LS, C).       % water right after something that is not in the middle of a vertical ship
 
 % shorthand version to test a column
-testCol(In, LCount, PCount) :- testCol(In, k, false, LCount, PCount).
+testCol(In, LCount, PCount) :- testCol(In, '~', false, LCount, PCount).
 
 % test all columns & count the length of the ships and number of parts per row
 % testCols(In, PartsPerRow, shipLengths)
@@ -184,7 +164,7 @@ noTouch([_|XS], [Y|YS]):- isWater(Y), noTouch(XS, YS).
 
 noTouchRows([]).
 noTouchRows([_]).
-noTouchRows([XS, YS|XXS]) :- noTouch(XS, [k|YS]), noTouch(YS, [k|XS]), noTouchRows([YS|XXS]).
+noTouchRows([XS, YS|XXS]) :- noTouch(XS, ['~'|YS]), noTouch(YS, ['~'|XS]), noTouchRows([YS|XXS]).
 
 
 testParts(In, In, RowSums, ColSums, Lengths) :- testRows(In, Out, RowSums, RowLengths),
@@ -192,5 +172,5 @@ testParts(In, In, RowSums, ColSums, Lengths) :- testRows(In, Out, RowSums, RowLe
                                                 transpose_m(Out, OutT),
                                                 testCols(OutT, ColSums, ColLengths),
                                                 append(RowLengths, ColLengths, AllLengths),
-                                                mergeLengths(AllLengths, Lengths).
+                                                mergeLengths(AllLengths, Lengths), !.
 
