@@ -10,32 +10,25 @@
 
 
 %% prepend element to list
-prepend(X, List, [X|List]).
-
-%% append element to list
-append(X, [], [X]).
-append(X, [Head|List], [Head|XList]) :- append(X, List, XList).
 
 %% create list of a certain length, filled with a certain element
-fillList(X, 1, [X]).
-fillList(X, N, [X|List]) :- fillList(X, M, List), N is 1+M.
+fillList(_, 0, []).
+fillList(X, N, [X|List]) :- N > 0, M is N-1, fillList(X, M, List).
 
 %% nth0 equivalent for matrices
 m_nth0(X, Y, LList, Elem) :- nth0(X, List, Elem),
 							nth0(Y, LList, List).
 
 %% surrounds the field with water
-surroundRow(Row, SurRow) :- prepend('~', Row, SurRowTemp),
-							append('~', SurRowTemp, SurRow),!.
+surroundRow(Row, SurRow) :- append(['~'|Row], ['~'], SurRow),!.
 
 surroundRows([],[]).
 surroundRows([Head|Tail], [WaterHead|WaterTail]) :- surroundRow(Head, WaterHead),
 													surroundRows(Tail, WaterTail),!.
 
-surroundCols(Rows, SurRows) :- 	length(Rows, Width),
+surroundCols([Row|Rows], SurRows) :- 	length(Row, Width),
 								fillList('~', Width, WaterRow),
-								prepend(WaterRow, Rows, SurRowsTemp),
-								append(WaterRow, SurRowsTemp, SurRows),!.
+								append([WaterRow|[Row|Rows]], [WaterRow], SurRows),!.
 
 surroundBuffer(Field, WaterField) :- surroundCols(Field, WaterFieldTemp),
 									surroundRows(WaterFieldTemp, WaterField).
@@ -75,14 +68,10 @@ neighbourRule(x,[['~','~','~'],[x,x,x],['~','~','~']]).
 neighbourRule(x,[['~','~','~'],[x,x,e],['~','~','~']]).
 neighbourRule(x,[['~','~','~'],[w,x,e],['~','~','~']]).
 
-%% checks if cell has correct neighbours
-correctNeighbours(X, Area) :-	neighbourRule(X, CorrectArea),
-								Area = CorrectArea.
-
 %% checks if all cells in a single row, surrounded by other rows above and below, are valid. Depends on buffer (water) surrounding area!
-checkRow([[LU,U,RU],[L,C,R],[LL,D,RL]]) :- correctNeighbours(C, [[LU,U,RU],[L,C,R],[LL,D,RL]]).
-checkRow([[LU,U,RU|TailU],[L,C,R|TailC],[LL,D,RL|TailL]]) :- 	correctNeighbours(C, [[LU,U,RU],[L,C,R],[LL,D,RL]]), 
-																checkRow([[U,RU|TailU],[C,R|TailC],[D,RL|TailL]]).
+checkRow([[LU,U,RU],[L,C,R],[LL,D,RL]]) :- neighbourRule(C, [[LU,U,RU],[L,C,R],[LL,D,RL]]).
+checkRow([[LU,U,RU|TailU],[L,C,R|TailC],[LL,D,RL|TailL]]) :-    neighbourRule(C, [[LU,U,RU],[L,C,R],[LL,D,RL]]), 
+                                                                checkRow([[U,RU|TailU],[C,R|TailC],[D,RL|TailL]]).
 
 %% checks if all rows in a list of rows are valid. Depends on buffer (water) surrounding area!
 checkRows([Upper,Center,Lower]) :- checkRow([Upper,Center,Lower]).
@@ -93,10 +82,10 @@ checkValidField(Field,BufferField) :- 	surroundBuffer(Field, BufferField),
 										checkRows(BufferField).
 
 %% counts the amount of ship parts are present in a single row
-%% countRowShipElems([],0).
-%% countRowShipElems([Head|Tail],N) :- shipPart(Head), countRowShipElems(Tail, M), N is 1+M;
-%% 									not(shipPart(Head)), countRowShipElems(Tail, N).
+countRowShipElems([], 0).
+countRowShipElems(['~'|Tail],N):- !, countRowShipElems(Tail, N).
+countRowShipElems([_|Tail],N) :- countRowShipElems(Tail, M), N is M+1.
 
-%% countColShipElems([],0,_).
+countColShipElems([],0,_).
 
-%% battleship(Field,Colnums,Rownums,Shipsizes,Field) :- 
+%battleship(Field,Colnums,Rownums,Shipsizes,Field) :- 
