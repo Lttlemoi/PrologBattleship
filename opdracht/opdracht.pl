@@ -25,19 +25,6 @@
                          testCols/3,
                          testParts/5]).
 
-
-% Convenience predicate to test if a cell is part of a ship, horizontal ship or vertical ship
-isShipPart(n).
-isShipPart(s).
-isShipPart(e).
-isShipPart(w).
-isShipPart(x).
-isShipPart(xh).
-isShipPart(xv).
-isShipPart(o).
-% Needs to be explicitely specified what literals are not ship parts
-isWater('~').
-
 % Test if a row is valid and counts the length of the horizontal ships.
 % A row is valid if
 %     - horizontal ships have the right direction: w, x, x, ..., e
