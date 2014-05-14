@@ -1,15 +1,17 @@
-% Stijn Manhaeve    20121442
-% Matthijs Van Os   20121014
-%
-% opdracht Programming Paradigms 2013-2014
-% Prolog assignment:
+%% Stijn Manhaeve    20121442
+%% Matthijs Van Os   20121014
+%%
+%% Opdracht Programming Paradigms 2013-2014
+%% Prolog assignment:
 %% Battleship Solitaire
 %% Idee 2: werken vanuit toegelaten omliggende cellen, per soort
 
-%% Algorithm outline
+%% Algorithm outline:
+%%  - Calculates all valid solutions, given the inital grid, according to the ruleset of the puzzle
+%%  - Selects those solutions which have a correct amount of ship parts in all rows and columns
+%%  - Selects the solutions which have the correct amount of ships of a certain length
+%%  => These are the correct answers
 
-
-%% prepend element to list
 
 %% create list of a certain length, filled with a certain element
 fillList(_, 0, []).
@@ -32,6 +34,16 @@ surroundCols([Row|Rows], SurRows) :-    length(Row, Width),
 
 surroundBuffer(Field, WaterField) :-    surroundCols(Field, WaterFieldTemp),
                                         surroundRows(WaterFieldTemp, WaterField).
+
+%% remove the outer columns and rows of a field
+removeRowBuffer([], []).
+removeRowBuffer([Row|Rows], [CleanRow|CleanRows]) :-   append([_|CleanRow], [_], Row), 
+                                                        removeRowBuffer(Rows, CleanRows).
+
+removeColBuffer(Rows, CleanedRows) :- append([_|CleanedRows], [_], Rows).
+
+removeBuffer(Field, CleanedField) :-    removeColBuffer(Field, CleanerField),
+                                        removeRowBuffer(CleanerField, CleanedField).
 
 
 %% all elements of ships
@@ -87,7 +99,9 @@ checkValidField(Field, RowCount, ColCount, BufferField) :-  surroundBuffer(Field
                                                             countCols(BufferField, CC),
                                                             write('COMPARE R:\n\t'),write(RC),nl,write('\t'),write(BufRC),nl, RC == BufRC, 
                                                             write('COMPARE C:\n\t'),write(CC),nl,write('\t'),write(BufCC),nl, CC == BufCC,
-                                                            write('SUCCESS\n'),!.
+                                                            write('SUCCESS\n'),
+                                                            removeBuffer(BufferField, FinalField),
+                                                            printField(FinalField),!.
 
 %% counts the amount of ship parts are present in a single row
 countRowShipElems([], 0).
