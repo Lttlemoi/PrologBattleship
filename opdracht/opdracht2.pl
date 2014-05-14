@@ -1,16 +1,17 @@
-%% Stijn Manhaeve    20121442
-%% Matthijs Van Os   20121014
-%%
-%% Opdracht Programming Paradigms 2013-2014
-%% Prolog assignment:
-%% Battleship Solitaire
-%% Idee 2: werken vanuit toegelaten omliggende cellen, per soort
+
+%%  Stijn Manhaeve    20121442
+%%  Matthijs Van Os   20121014
+
+%% ==========================================
+%%  Opdracht Programming Paradigms 2013-2014
+%%  Prolog assignment: BATTLESHIP SOLITAIRE
+%% ==========================================
+
 
 %% Algorithm outline:
-%%  - Calculates all valid solutions, given the inital grid, according to the ruleset of the puzzle
-%%  - Selects those solutions which have a correct amount of ship parts in all rows and columns
-%%  - Selects the solutions which have the correct amount of ships of a certain length
-%%  => These are the correct answers
+%% \-> Calculates all valid solutions, given the inital grid, according to the ruleset of the puzzle (all cells have correct neighbours)
+%%  \-> Selects those solutions which have a correct amount of ship parts in all rows and columns
+%%   \-> Selects a solutions which has the correct amount of ships of a certain length
 
 
 %% create list of a certain length, filled with a certain element
@@ -26,7 +27,7 @@ p_reapFirst([[X|XS]|XXS], [XS|YYS], [X|AS]) :- p_reapFirst(XXS, YYS, AS).
 
 %% transposes the given matrix
 %% transpose_m(In, Out)
-%% succesful if In and Out are eachothers transposed forms.
+%% succesful if In and Out are each other's transposed forms.
 %% will fail if the matrix is jagged.
 transpose_m([], []).
 transpose_m([[]|XS], []) :- transpose_m(XS, []).
@@ -73,6 +74,7 @@ neighbourRule(s,[['~',x,'~'],['~',s,'~'],['~','~','~']]).
 neighbourRule(s,[['~',n,'~'],['~',s,'~'],['~','~','~']]).
 
 %% x has exactly two neighbours, either horizontally or vertically
+%% these neighbours can be either another x, or a fitting edge piece (n, e, s, w)
 neighbourRule(x,[['~',n,'~'],['~',x,'~'],['~',s,'~']]).
 neighbourRule(x,[['~',x,'~'],['~',x,'~'],['~',s,'~']]).
 neighbourRule(x,[['~',n,'~'],['~',x,'~'],['~',x,'~']]).
@@ -82,28 +84,19 @@ neighbourRule(x,[['~','~','~'],[x,x,x],['~','~','~']]).
 neighbourRule(x,[['~','~','~'],[x,x,e],['~','~','~']]).
 neighbourRule(x,[['~','~','~'],[w,x,e],['~','~','~']]).
 
-%% checks if all cells in a single row, surrounded by other rows above and below, are valid. Depends on buffer (water) surrounding area!
+%% checks if all cells in a single row, surrounded by other rows above and below, are valid
+%% depends on buffer (water) surrounding area!
 checkRow([[LU,U,RU],[L,C,R],[LL,D,RL]]) :- neighbourRule(C, [[LU,U,RU],[L,C,R],[LL,D,RL]]).
 checkRow([[LU,U,RU|TailU],[L,C,R|TailC],[LL,D,RL|TailL]]) :-    neighbourRule(C, [[LU,U,RU],[L,C,R],[LL,D,RL]]), 
                                                                 checkRow([[U,RU|TailU],[C,R|TailC],[D,RL|TailL]]).
 
-%% checks if all rows in a list of rows are valid. Depends on buffer (water) surrounding area!
+%% checks if all rows in a list of rows are valid
+%% depends on buffer (water) surrounding area!
 checkRows([Upper,Center,Lower]) :- checkRow([Upper,Center,Lower]).
 checkRows([Upper,Center,Lower|Tail]) :- checkRow([Upper,Center,Lower]), checkRows([Center,Lower|Tail]).
 
-%% wip incomplete
-battleship(Field, RowCount, ColCount, ShipCount, BufferField) :-    surroundBuffer(Field, BufferField),
-                                                                    checkRows(BufferField),
-                                                                    countRows(Field, RC),
-                                                                    RC == RowCount,
-                                                                    countCols(Field, CC),
-                                                                    CC == ColCount,
-                                                                    countAllShips(Field, Ships),
-                                                                    Ships == ShipCount,
-                                                                    write('SOLUTION: \n'),
-                                                                    printField(Field),!.
 
-%% counts the amount of ship parts are present in a single row
+%% counts the amount of ship parts present in a single row
 countRowShipElems([], 0).
 countRowShipElems(['~'|Tail],N):- !, countRowShipElems(Tail, N).
 countRowShipElems([_|Tail],N) :- countRowShipElems(Tail, M), N is M+1.
@@ -119,6 +112,7 @@ countColShipElems([Row|Rows], N, ShipAmount) :- nth0(N, Row, Cell),
                                                 countColShipElems(Rows, N, M),
                                                 ( shipPart(Cell) -> ShipAmount is M+1 ; ShipAmount is M ).
 
+%% counts the amount of ship parts in all columns of a field
 countCols(Rows, Counts) :-  length(Rows, Length),
                             Height is Length-1,
                             countAllCols(Rows, Height, Counts).
@@ -130,9 +124,9 @@ countAllCols(Rows, ColNum, NewCounts) :-    Prev is ColNum - 1,
                                             append(Counts, [N], NewCounts).
 
 
-%% converts a list of ship lengths to the list format from the assignment.
+%% converts a list of ship lengths to the list format from the assignment
 %% e.g. with ships of size [3, 1, 5, 2, 1, 1, 2, 1] -> [2, 2, 1, 0, 1]
-%% NOTE: the other predicates count the unicellular ships twice. This predicate fixes that.
+%% NOTE: the other predicates count the unicellular ships twice. This predicate fixes that
 %% mergeLengths(In, Out)
 mergeLengths([], [], _).
 mergeLengths(XS, [L|LS], K) :- subtract(XS, [K], YS),
@@ -144,6 +138,7 @@ mergeLengths(XS, [L|LS], K) :- subtract(XS, [K], YS),
 mergeLengths(XS, [L| LS]) :- mergeLengths(XS, [LL|LS], 1),
                              L is LL/2.
 
+%% counts towards the end of a ship
 countShip([], _, 0).
 countShip([Cell|Row], End, Size) :- (   Cell = x ->
                                             countShip(Row, End, PrevSize),
@@ -154,22 +149,25 @@ countShip([Cell|Row], End, Size) :- (   Cell = x ->
                                         true
                                     ).
 
+%% counts all ships in a list of cells
 countRowShips([], _, _, _).
-countRowShips([Cell|Row], Start, End, Ships) :-    (   Cell = o ->
+countRowShips([Cell|Row], Start, End, Ships) :- (   Cell = o ->
                                                         append(PrevShips, [1], Ships),
                                                         countRowShips(Row, Start, End, PrevShips),!
-                                                    ;   Cell = Start ->
-                                                            countShip(Row, End, Size),
-                                                            append(PrevShips, [Size], Ships),
-                                                            countRowShips(Row, Start, End, PrevShips),!
-                                                    ;   countRowShips(Row, Start, End, Ships)
-                                                    ).
+                                                ;   Cell = Start ->
+                                                        countShip(Row, End, Size),
+                                                        append(PrevShips, [Size], Ships),
+                                                        countRowShips(Row, Start, End, PrevShips),!
+                                                ;   countRowShips(Row, Start, End, Ships)
+                                                ).
 
+%% counts all horizontal ships (from 'w' to 'e') and small ships ('o') in a field
 countHorizontalShips([], []).
 countHorizontalShips([Row|Rows], Ships) :-  countRowShips(Row, w, e, RowShips),
                                             countHorizontalShips(Rows, PrevShips),
                                             append(PrevShips, RowShips, Ships).
 
+%% counts all vertical ships (from 'n' to 's') and small ships ('o') in a field
 countVerticalShips(Rows, Ships) :-  transpose_m(Rows, Cols),
                                     countVShips(Cols, Ships).
 
@@ -178,14 +176,29 @@ countVShips([Col|Cols], Ships) :-   countRowShips(Col, n, s, ColShips),
                                     countVShips(Cols, PrevShips),
                                     append(PrevShips, ColShips, Ships).                                           
 
+%% counts all ships on a field, both horizontally and vertically
 countAllShips(Field, Ships) :-  countHorizontalShips(Field, RowShips),
                                 countVerticalShips(Field, ColShips),
                                 append(RowShips, ColShips, TotalShips),
                                 mergeLengths(TotalShips, Ships).
 
 
+%% print a list of atoms
 printList([]).  
 printList([X|List]) :-  write(X), write(' '), printList(List).
+
+%% print an entire field
 printField([]).
 printField([Head|Rows]) :- printList(Head), nl, printField(Rows).
 
+
+%% calculate a solution for the puzzle
+battleship(Field, RowCount, ColCount, ShipCount, BufferField) :-    surroundBuffer(Field, BufferField),
+
+                                                                    checkRows(BufferField),
+                                                                    countRows(Field, RC), RC == RowCount,
+                                                                    countCols(Field, CC), CC == ColCount,
+                                                                    countAllShips(Field, Ships), Ships == ShipCount,
+
+                                                                    write('SOLUTION: \n'),
+                                                                    printField(Field),!.
