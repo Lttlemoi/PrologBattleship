@@ -22,18 +22,6 @@ fillList(X, N, [X|List]) :- N > 0, M is N-1, fillList(X, M, List).
 m_nth0(X, Y, LList, Elem) :- nth0(X, List, Elem),
                             nth0(Y, LList, List).
 
-p_reapFirst([], [], []).
-p_reapFirst([[X|XS]|XXS], [XS|YYS], [X|AS]) :- p_reapFirst(XXS, YYS, AS).
-
-%% transposes the given matrix
-%% transpose_m(In, Out)
-%% succesful if In and Out are each other's transposed forms.
-%% will fail if the matrix is jagged.
-transpose_m([], []).
-transpose_m([[]|XS], []) :- transpose_m(XS, []).
-transpose_m(XS, [AS|AAS]) :- p_reapFirst(XS, YS, AS),
-                             transpose_m(YS, AAS).
-
 %% surrounds the field with water
 surroundList(Row, Buffer, SurRow) :- append([Buffer|Row], [Buffer], SurRow),!.
 
@@ -171,15 +159,20 @@ countHorizontalShips([Row|Rows], Ships) :-  countRowShips(Row, w, e, RowShips),
 countVerticalShips(Rows, Ships) :-  transpose_m(Rows, Cols),
                                     countVShips(Cols, Ships).
 
-countVShips([], []).
-countVShips([Col|Cols], Ships) :-   countRowShips(Col, n, s, ColShips),
-                                    countVShips(Cols, PrevShips),
-                                    append(PrevShips, ColShips, Ships).                                           
+%% p_reapFirst(In, Rest, Out)
+%% succeeds when In is a matrix, Out is the first column of that matrix (as a flat list) and Rest is the matrix without the first column.
+p_reapFirst([], [], []).
+p_reapFirst([[X|XS]|XXS], [XS|YYS], [X|AS]) :- p_reapFirst(XXS, YYS, AS).
+
+countVShips([[]|_], First, First).
+countVShips(Rows, Ships, First) :-  p_reapFirst(Rows, Rest, Col),  
+        							countRowShips(Col, n, s, ColShips),
+                                    countVShips(Rest, PrevShips, First),
+                                    append(PrevShips, ColShips, Ships).
 
 %% counts all ships on a field, both horizontally and vertically
 countAllShips(Field, Ships) :-  countHorizontalShips(Field, RowShips),
-                                countVerticalShips(Field, ColShips),
-                                append(RowShips, ColShips, TotalShips),
+                                countVShips(Field, TotalShips, RowShips),
                                 mergeLengths(TotalShips, Ships).
 
 
@@ -196,9 +189,13 @@ printField([Head|Rows]) :- printList(Head), nl, printField(Rows).
 battleship(Field, RowCount, ColCount, ShipCount, BufferField) :-    surroundBuffer(Field, BufferField),
 
                                                                     checkRows(BufferField),
-                                                                    countRows(Field, RC), RC == RowCount,
-                                                                    countCols(Field, CC), CC == ColCount,
-                                                                    countAllShips(Field, Ships), Ships == ShipCount,
-
+                                                                    countRows(Field, RowCount),
+                                                                    countCols(Field, ColCount),
+                                                                    countAllShips(Field, ShipCount),
                                                                     write('SOLUTION: \n'),
                                                                     printField(Field),!.
+
+doTest(T, ExecTime) :- statistics(walltime, [_ | [_]]),
+			T,
+			statistics(walltime, [_ | [ExecTime]]),
+			write('Execution took '),write(ExecTime), write(' ms.'), nl.
