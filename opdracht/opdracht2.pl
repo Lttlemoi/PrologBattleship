@@ -21,6 +21,18 @@ fillList(X, N, [X|List]) :- N > 0, M is N-1, fillList(X, M, List).
 m_nth0(X, Y, LList, Elem) :- nth0(X, List, Elem),
                             nth0(Y, LList, List).
 
+p_reapFirst([], [], []).
+p_reapFirst([[X|XS]|XXS], [XS|YYS], [X|AS]) :- p_reapFirst(XXS, YYS, AS).
+
+%% transposes the given matrix
+%% transpose_m(In, Out)
+%% succesful if In and Out are eachothers transposed forms.
+%% will fail if the matrix is jagged.
+transpose_m([], []).
+transpose_m([[]|XS], []) :- transpose_m(XS, []).
+transpose_m(XS, [AS|AAS]) :- p_reapFirst(XS, YS, AS),
+                             transpose_m(YS, AAS).
+
 %% surrounds the field with water
 surroundList(Row, Buffer, SurRow) :- append([Buffer|Row], [Buffer], SurRow),!.
 
@@ -34,16 +46,6 @@ surroundCols([Row|Rows], SurRows) :-    length(Row, Width),
 
 surroundBuffer(Field, WaterField) :-    surroundCols(Field, WaterFieldTemp),
                                         surroundRows(WaterFieldTemp, WaterField).
-
-%% remove the outer columns and rows of a field
-removeRowBuffer([], []).
-removeRowBuffer([Row|Rows], [CleanRow|CleanRows]) :-   append([_|CleanRow], [_], Row), 
-                                                        removeRowBuffer(Rows, CleanRows).
-
-removeColBuffer(Rows, CleanedRows) :- append([_|CleanedRows], [_], Rows).
-
-removeBuffer(Field, CleanedField) :-    removeColBuffer(Field, CleanerField),
-                                        removeRowBuffer(CleanerField, CleanedField).
 
 
 %% all elements of ships
@@ -90,18 +92,16 @@ checkRows([Upper,Center,Lower]) :- checkRow([Upper,Center,Lower]).
 checkRows([Upper,Center,Lower|Tail]) :- checkRow([Upper,Center,Lower]), checkRows([Center,Lower|Tail]).
 
 %% wip incomplete
-checkValidField(Field, RowCount, ColCount, BufferField) :-  surroundBuffer(Field, BufferField),
-                                                            surroundList(RowCount, 0, BufRC),
-                                                            surroundList(ColCount, 0, BufCC),
-                                                            checkRows(BufferField),
-                                                            printField(BufferField),
-                                                            countRows(BufferField, RC),
-                                                            countCols(BufferField, CC),
-                                                            write('COMPARE R:\n\t'),write(RC),nl,write('\t'),write(BufRC),nl, RC == BufRC, 
-                                                            write('COMPARE C:\n\t'),write(CC),nl,write('\t'),write(BufCC),nl, CC == BufCC,
-                                                            write('SUCCESS\n'),
-                                                            removeBuffer(BufferField, FinalField),
-                                                            printField(FinalField),!.
+battleship(Field, RowCount, ColCount, ShipCount, BufferField) :-    surroundBuffer(Field, BufferField),
+                                                                    checkRows(BufferField),
+                                                                    countRows(Field, RC),
+                                                                    RC == RowCount,
+                                                                    countCols(Field, CC),
+                                                                    CC == ColCount,
+                                                                    countAllShips(Field, Ships),
+                                                                    Ships == ShipCount,
+                                                                    write('SOLUTION: \n'),
+                                                                    printField(Field),!.
 
 %% counts the amount of ship parts are present in a single row
 countRowShipElems([], 0).
@@ -129,9 +129,63 @@ countAllCols(Rows, ColNum, NewCounts) :-    Prev is ColNum - 1,
                                             countColShipElems(Rows, ColNum, N),
                                             append(Counts, [N], NewCounts).
 
+
+%% converts a list of ship lengths to the list format from the assignment.
+%% e.g. with ships of size [3, 1, 5, 2, 1, 1, 2, 1] -> [2, 2, 1, 0, 1]
+%% NOTE: the other predicates count the unicellular ships twice. This predicate fixes that.
+%% mergeLengths(In, Out)
+mergeLengths([], [], _).
+mergeLengths(XS, [L|LS], K) :- subtract(XS, [K], YS),
+                               length(XS, LX),
+                               LX > 0, length(YS, LY),
+                               L is LX-LY,
+                               KK is K+1,
+                               mergeLengths(YS, LS, KK).
+mergeLengths(XS, [L| LS]) :- mergeLengths(XS, [LL|LS], 1),
+                             L is LL/2.
+
+countShip([], _, 0).
+countShip([Cell|Row], End, Size) :- (   Cell = x ->
+                                            countShip(Row, End, PrevSize),
+                                            Size is PrevSize + 1,!
+                                    ;   Cell = End ->
+                                            Size is 2,!
+                                    ;   write('SOMETHING WENT VERY WRONG\n'),
+                                        true
+                                    ).
+
+countRowShips([], _, _, _).
+countRowShips([Cell|Row], Start, End, Ships) :-    (   Cell = o ->
+                                                        append(PrevShips, [1], Ships),
+                                                        countRowShips(Row, Start, End, PrevShips),!
+                                                    ;   Cell = Start ->
+                                                            countShip(Row, End, Size),
+                                                            append(PrevShips, [Size], Ships),
+                                                            countRowShips(Row, Start, End, PrevShips),!
+                                                    ;   countRowShips(Row, Start, End, Ships)
+                                                    ).
+
+countHorizontalShips([], []).
+countHorizontalShips([Row|Rows], Ships) :-  countRowShips(Row, w, e, RowShips),
+                                            countHorizontalShips(Rows, PrevShips),
+                                            append(PrevShips, RowShips, Ships).
+
+countVerticalShips(Rows, Ships) :-  transpose_m(Rows, Cols),
+                                    countVShips(Cols, Ships).
+
+countVShips([], []).
+countVShips([Col|Cols], Ships) :-   countRowShips(Col, n, s, ColShips),
+                                    countVShips(Cols, PrevShips),
+                                    append(PrevShips, ColShips, Ships).                                           
+
+countAllShips(Field, Ships) :-  countHorizontalShips(Field, RowShips),
+                                countVerticalShips(Field, ColShips),
+                                append(RowShips, ColShips, TotalShips),
+                                mergeLengths(TotalShips, Ships).
+
+
 printList([]).  
 printList([X|List]) :-  write(X), write(' '), printList(List).
 printField([]).
 printField([Head|Rows]) :- printList(Head), nl, printField(Rows).
 
-%battleship(Field,Colnums,Rownums,Shipsizes,Field) :- 
